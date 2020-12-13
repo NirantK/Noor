@@ -1,11 +1,22 @@
 {
   
+    
+        "post0": {
+            "title": "Get Data",
+            "content": "%load_ext autoreload %autoreload 2 . Path.pdfls = lambda x: [x for x in list(x.iterdir()) if x.suffix == &quot;.pdf&quot;] Path.ls = lambda x: list(x.iterdir()) . Get List of Books and Download Links . sheet_name = &quot;History&quot; books_list = ( f&quot;https://api.steinhq.com/v1/storages/5fd49704f62b6004b3eb63a3/{sheet_name}&quot; ) r = requests.get(books_list) . . ncert_history_books = [Book(**x) for x in json.loads(r.text)] . . Download and Extract all Books . for book in tqdm(ncert_history_books): book.download(&quot;../data/raw&quot;) book.unzip(&quot;../data/extract&quot;) . . single_book = ncert_history_books[0] . pdf_files = [] for folder in single_book.extract_to_path.ls(): pdf_files.extend(folder.pdfls()) pdf_files.sort() pdf_files = [ file for file in pdf_files if file.stem[-2:].isdigit() ] # keep the chapter files, nothing else pdf_files . from typing import List import pdfplumber def pdf_to_text(file: Path) -&gt; List[str]: page_texts = [] with pdfplumber.open(file) as pdf: for page in pdf.pages[3:5]: txt = page.extract_text() txt = &quot; &quot;.join(txt.split(&quot; n&quot;)) page_texts.append(txt) return page_texts for file in pdf_files: plain_text = pdf_to_text(file) print(plain_text) . # ncert_history_books[1].unzip() .",
+            "url": "https://nirantk.github.io/projectnoor/jupyter/2020/12/12/Get-and-Extract-Data.html",
+            "relUrl": "/jupyter/2020/12/12/Get-and-Extract-Data.html",
+            "date": " • Dec 12, 2020"
+        }
+        
+    
+  
 
   
   
 
   
-      "page1": {
+      ,"page1": {
           "title": "About Me",
           "content": "This website is powered by fastpages 1. . a blogging platform that natively supports Jupyter notebooks in addition to other formats. &#8617; . |",
           "url": "https://nirantk.github.io/projectnoor/about/",

@@ -31,8 +31,7 @@ jobs:
     - name: Black Code Formatter
       uses: tdeboissiere/python-format-action@master
       with:
-        args: '**/**.py'
-        
+        args: '--force-exclude **/**.ipynb'
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Run isort

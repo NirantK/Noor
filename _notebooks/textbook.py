@@ -16,7 +16,7 @@ class Book(BaseModel):
     class_or_grade: int = None
     url: str = ""
     title: str = ""
-    origin: str = ""
+    origin: str = ''
     zip_file_path: str = ""
     extract_to_path: str = ""
 

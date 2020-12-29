@@ -42,7 +42,7 @@ jobs:
     - name: Push changes isort
       uses: ad-m/github-push-action@v0.5.0
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github_token: ${{ secrets.GH_ACTION_TOKEN }}
         
     - name: Test with pytest
       run: |

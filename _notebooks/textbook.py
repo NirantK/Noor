@@ -1,13 +1,19 @@
+from io import StringIO
 from pathlib import Path
 from typing import List, Union
 
 import requests
 from pydantic import BaseModel
+from tqdm import tqdm
+
+from pdf_parsing import pdf_to_text
 
 
 class Chapter(BaseModel):
     number: int
-    page_text: List[str]  # text from each page is a str in a list
+    file_path: Union[Path, str] = ""
+    raw_text: str
+    clean_text: Union[None, str]
 
 
 class Book(BaseModel):
@@ -19,6 +25,7 @@ class Book(BaseModel):
     origin: str = ""
     zip_file_path: str = ""
     extract_to_path: str = ""
+    chapters: List = []
 
     def download(self, file_path: Path = ".", file_name: Union[None, str] = None):
         """
@@ -48,9 +55,7 @@ class Book(BaseModel):
         try:
             assert self.zip_file_path != ""
         except AssertionError as e:
-            raise AssertionError(
-                f"Please download the file or set the zip_file_path variable"
-            )
+            raise AssertionError(f"Please download the file or set the zip_file_path variable")
         import zipfile
 
         extract_to = Path(extract_to)
@@ -62,3 +67,38 @@ class Book(BaseModel):
         self.extract_to_path = export_to_path
         with zipfile.ZipFile(file_path, "r") as zip_ref:
             zip_ref.extractall(export_to_path)
+
+    def make_chapters(self):
+        def get_chapter_pdf_for_book(book: Book) -> List:
+            """Get paths to all pdf files for each chapter
+
+            Args:
+                book (Book): [description]
+
+            Returns:
+                List: of all chapter pdf files
+            """
+            pdf_files = []
+            for folder in self.extract_to_path.ls():
+                pdf_files.extend(folder.pdfls())
+            pdf_files.sort()
+            pdf_files = [file for file in pdf_files if file.stem[-2:].isdigit()]  # keep the chapter files, nothing else
+            return pdf_files
+
+        pdf_files = get_chapter_pdf_for_book(self)
+        for file in tqdm(pdf_files):
+            """
+            output_io_wrapper is StringIO because TextConverter expect
+            StringIOWrapper/TextIOWrapper or similar object as an input.
+            This can be replaced by TextIOwrapper when we want to export the
+            output directly to the file
+            """
+            output_io_wrapper = StringIO()
+            plain_text = pdf_to_text(file, output_io_wrapper)
+            chp = Chapter(
+                clean_text=None,
+                raw_text=plain_text,
+                file_path=file,
+                number=int(file.stem[-2:]),
+            )
+            self.chapters.append(chp)

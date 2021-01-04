@@ -6,7 +6,12 @@ import requests
 from pydantic import BaseModel
 from tqdm import tqdm
 
+import neuralcoref
+import spacy
 from pdf_parsing import pdf_to_text
+
+nlp = spacy.load("en")
+neuralcoref.add_to_pipe(nlp)
 
 
 class Chapter(BaseModel):
@@ -14,6 +19,8 @@ class Chapter(BaseModel):
     file_path: Union[Path, str] = ""
     raw_text: str
     clean_text: Union[None, str]
+    coref_resolved_text: Union[None, str]
+    coref_clusters: Union[None, list]
 
 
 class Book(BaseModel):
@@ -55,7 +62,9 @@ class Book(BaseModel):
         try:
             assert self.zip_file_path != ""
         except AssertionError as e:
-            raise AssertionError(f"Please download the file or set the zip_file_path variable")
+            raise AssertionError(
+                f"Please download the file or set the zip_file_path variable"
+            )
         import zipfile
 
         extract_to = Path(extract_to)
@@ -82,7 +91,9 @@ class Book(BaseModel):
             for folder in self.extract_to_path.ls():
                 pdf_files.extend(folder.pdfls())
             pdf_files.sort()
-            pdf_files = [file for file in pdf_files if file.stem[-2:].isdigit()]  # keep the chapter files, nothing else
+            pdf_files = [
+                file for file in pdf_files if file.stem[-2:].isdigit()
+            ]  # keep the chapter files, nothing else
             return pdf_files
 
         pdf_files = get_chapter_pdf_for_book(self)
@@ -100,5 +111,20 @@ class Book(BaseModel):
                 raw_text=plain_text,
                 file_path=file,
                 number=int(file.stem[-2:]),
+                coref_resolved_text=None,
+                coref_clusters=None
             )
             self.chapters.append(chp)
+
+    def resolve_coreference(self):
+        """Uses spacy pipleline as a base and extends it
+        using neuralcoreference to process the coreferences
+        in the plain text that you get.
+
+        Saving both resolved text as well as the coreference
+        clusters in the chapter.
+        """
+        for chapter in tqdm(self.chapters):
+            doc = nlp(chapter.raw_text)
+            chapter.coref_resolved_text = doc._.coref_resolved
+            chapter.coref_clusters = doc._.coref_clusters

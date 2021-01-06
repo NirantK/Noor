@@ -57,9 +57,7 @@ class Book(BaseModel):
         try:
             assert self.zip_file_path != ""
         except AssertionError as e:
-            raise AssertionError(
-                f"Please download the file or set the zip_file_path variable"
-            )
+            raise AssertionError(f"Please download the file or set the zip_file_path variable")
         import zipfile
 
         extract_to = Path(extract_to)
@@ -86,9 +84,7 @@ class Book(BaseModel):
             for folder in self.extract_to_path.ls():
                 pdf_files.extend(folder.pdfls())
             pdf_files.sort()
-            pdf_files = [
-                file for file in pdf_files if file.stem[-2:].isdigit()
-            ]  # keep the chapter files, nothing else
+            pdf_files = [file for file in pdf_files if file.stem[-2:].isdigit()]  # keep the chapter files, nothing else
             return pdf_files
 
         pdf_files = get_chapter_pdf_for_book(self)

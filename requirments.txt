@@ -2,6 +2,6 @@ requests
 pydantic
 tqdm
 pysbd
-spacy==0.2.1
+spacy==2.1.0
 neuralcoref
 pdfminer.six

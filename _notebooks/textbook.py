@@ -2,13 +2,16 @@ from io import StringIO
 from pathlib import Path
 from typing import List, Union
 
+import pysbd
 import requests
+from pdf_parsing import pdf_to_text
 from pydantic import BaseModel
 from tqdm import tqdm
 
 import neuralcoref
 import spacy
 from pdf_parsing import pdf_to_text
+seg = pysbd.Segmenter(language="en", clean=True)
 
 nlp = spacy.load("en")
 neuralcoref.add_to_pipe(nlp)
@@ -116,6 +119,32 @@ class Book(BaseModel):
             )
             self.chapters.append(chp)
 
+    def clean_raw_text(self, disable_pysbd=False):
+        """pySBD (Python Sentence Boundary Disambiguation)
+        is a rule-based sentence boundary detection that
+        works out-of-the-box.
+
+        Didn't use the spacy-pipe version of this because it
+        is conflicting with the neuralcoref.
+
+        Each paragraph is separated by \n\n so using that
+        to remove separate it in paragraphs and then removing \n
+        within the paragraphs.
+        Also using pySBD to then identify sentences in each
+        paragraph. I don't know if we need this so added a disable
+        option for this. The difference you can see after disabling
+        it is you will be able to see the whole paragraph as one
+        blob.
+        """
+        for chapter in tqdm(self.chapters):
+            clean = []
+            for text in chapter.raw_text.split("\n\n"):
+                clean.append(text.replace("\n", " "))
+            clean_text = "\n".join(clean)
+            if not disable_pysbd:
+                clean_text = "\n".join(seg.segment(clean_text))
+            chapter.clean_text = clean_text
+    
     def resolve_coreference(self):
         """Uses spacy pipleline as a base and extends it
         using neuralcoreference to process the coreferences
@@ -125,6 +154,12 @@ class Book(BaseModel):
         clusters in the chapter.
         """
         for chapter in tqdm(self.chapters):
-            doc = nlp(chapter.raw_text)
+            if not chapter.clean_text :
+                print(
+                    "There is no clean_text for the chapter. \
+                    Please run book.clean_raw_text or manually add\
+                    custom cleaned text by iterating through chapters")
+                return
+            doc = nlp(chapter.clean_text)
             chapter.coref_resolved_text = doc._.coref_resolved
             chapter.coref_clusters = doc._.coref_clusters

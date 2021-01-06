@@ -2,11 +2,13 @@ from io import StringIO
 from pathlib import Path
 from typing import List, Union
 
+import pysbd
 import requests
+from pdf_parsing import pdf_to_text
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from pdf_parsing import pdf_to_text
+seg = pysbd.Segmenter(language="en", clean=True)
 
 
 class Chapter(BaseModel):
@@ -102,3 +104,29 @@ class Book(BaseModel):
                 number=int(file.stem[-2:]),
             )
             self.chapters.append(chp)
+
+    def clean_raw_text(self, disable_pysbd=False):
+        """pySBD (Python Sentence Boundary Disambiguation)
+        is a rule-based sentence boundary detection that
+        works out-of-the-box.
+
+        Didn't use the spacy-pipe version of this because it
+        is conflicting with the neuralcoref.
+
+        Each paragraph is separated by \n\n so using that
+        to remove separate it in paragraphs and then removing \n
+        within the paragraphs.
+        Also using pySBD to then identify sentences in each
+        paragraph. I don't know if we need this so added a disable
+        option for this. The difference you can see after disabling
+        it is you will be able to see the whole paragraph as one
+        blob.
+        """
+        for chapter in tqdm(self.chapters):
+            clean = []
+            for text in chapter.raw_text.split("\n\n"):
+                clean.append(text.replace("\n", " "))
+            clean_text = "\n".join(clean)
+            if not disable_pysbd:
+                clean_text = "\n".join(seg.segment(clean_text))
+            chapter.clean_text = clean_text

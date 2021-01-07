@@ -2,15 +2,15 @@ from io import StringIO
 from pathlib import Path
 from typing import List, Union
 
+import neuralcoref
 import pysbd
 import requests
-from pdf_parsing import pdf_to_text
+import spacy
 from pydantic import BaseModel
 from tqdm import tqdm
 
-import neuralcoref
-import spacy
 from pdf_parsing import pdf_to_text
+
 seg = pysbd.Segmenter(language="en", clean=True)
 
 nlp = spacy.load("en")
@@ -65,9 +65,7 @@ class Book(BaseModel):
         try:
             assert self.zip_file_path != ""
         except AssertionError as e:
-            raise AssertionError(
-                f"Please download the file or set the zip_file_path variable"
-            )
+            raise AssertionError(f"Please download the file or set the zip_file_path variable")
         import zipfile
 
         extract_to = Path(extract_to)
@@ -94,9 +92,7 @@ class Book(BaseModel):
             for folder in self.extract_to_path.ls():
                 pdf_files.extend(folder.pdfls())
             pdf_files.sort()
-            pdf_files = [
-                file for file in pdf_files if file.stem[-2:].isdigit()
-            ]  # keep the chapter files, nothing else
+            pdf_files = [file for file in pdf_files if file.stem[-2:].isdigit()]  # keep the chapter files, nothing else
             return pdf_files
 
         pdf_files = get_chapter_pdf_for_book(self)
@@ -115,7 +111,7 @@ class Book(BaseModel):
                 file_path=file,
                 number=int(file.stem[-2:]),
                 coref_resolved_text=None,
-                coref_clusters=None
+                coref_clusters=None,
             )
             self.chapters.append(chp)
 
@@ -144,7 +140,7 @@ class Book(BaseModel):
             if not disable_pysbd:
                 clean_text = "\n".join(seg.segment(clean_text))
             chapter.clean_text = clean_text
-    
+
     def resolve_coreference(self):
         """Uses spacy pipleline as a base and extends it
         using neuralcoreference to process the coreferences
@@ -154,11 +150,12 @@ class Book(BaseModel):
         clusters in the chapter.
         """
         for chapter in tqdm(self.chapters):
-            if not chapter.clean_text :
+            if not chapter.clean_text:
                 print(
                     "There is no clean_text for the chapter. \
                     Please run book.clean_raw_text or manually add\
-                    custom cleaned text by iterating through chapters")
+                    custom cleaned text by iterating through chapters"
+                )
                 return
             doc = nlp(chapter.clean_text)
             chapter.coref_resolved_text = doc._.coref_resolved

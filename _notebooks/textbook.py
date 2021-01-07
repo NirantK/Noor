@@ -96,7 +96,7 @@ class Book(BaseModel):
             return pdf_files
 
         pdf_files = get_chapter_pdf_for_book(self)
-        for file in tqdm(pdf_files):
+        for file in pdf_files:
             """
             output_io_wrapper is StringIO because TextConverter expect
             StringIOWrapper/TextIOWrapper or similar object as an input.
@@ -132,7 +132,7 @@ class Book(BaseModel):
         it is you will be able to see the whole paragraph as one
         blob.
         """
-        for chapter in tqdm(self.chapters):
+        for chapter in self.chapters:
             clean = []
             for text in chapter.raw_text.split("\n\n"):
                 clean.append(text.replace("\n", " "))

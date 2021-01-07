@@ -1,14 +1,14 @@
 from io import StringIO
 from pathlib import Path
-from typing import List, Union
+from typing import Bool, List, Union
 
-import neuralcoref
-import pysbd
 import requests
 import spacy
 from pydantic import BaseModel
 from tqdm import tqdm
 
+import neuralcoref
+import pysbd  # pySBD (Python Sentence Boundary Disambiguation) is a rule-based sentence boundary detection
 from pdf_parsing import pdf_to_text
 
 seg = pysbd.Segmenter(language="en", clean=True)
@@ -24,6 +24,22 @@ class Chapter(BaseModel):
     clean_text: Union[None, str]
     coref_resolved_text: Union[None, str]
     coref_clusters: Union[None, list]
+
+    def better_sentence_boundaries(self, disable_pysbd: Bool = False) -> None:
+        """
+        Each paragraph is separated by \n\n so using that
+        to remove separate it in paragraphs and then removing \n
+        within the paragraphs.
+
+        Also using pySBD to then identify sentences in each
+        paragraph. Disabling it converts the para into one single large blob
+        """
+        clean = []
+        for text in self.raw_text.split("\n\n"):
+            clean.append(text.replace("\n", " "))
+        self.clean_text = "\n".join(clean)
+        if not disable_pysbd:
+            self.clean_text = "\n".join(seg.segment(self.clean_text))
 
 
 class Book(BaseModel):
@@ -115,31 +131,9 @@ class Book(BaseModel):
             )
             self.chapters.append(chp)
 
-    def clean_raw_text(self, disable_pysbd=False):
-        """pySBD (Python Sentence Boundary Disambiguation)
-        is a rule-based sentence boundary detection that
-        works out-of-the-box.
-
-        Didn't use the spacy-pipe version of this because it
-        is conflicting with the neuralcoref.
-
-        Each paragraph is separated by \n\n so using that
-        to remove separate it in paragraphs and then removing \n
-        within the paragraphs.
-        Also using pySBD to then identify sentences in each
-        paragraph. I don't know if we need this so added a disable
-        option for this. The difference you can see after disabling
-        it is you will be able to see the whole paragraph as one
-        blob.
-        """
+    def clean_raw_text(self, disable_pysbd: Bool = False):
         for chapter in self.chapters:
-            clean = []
-            for text in chapter.raw_text.split("\n\n"):
-                clean.append(text.replace("\n", " "))
-            clean_text = "\n".join(clean)
-            if not disable_pysbd:
-                clean_text = "\n".join(seg.segment(clean_text))
-            chapter.clean_text = clean_text
+            chapter.better_sentence_boundaries(disable_pysbd=disable_pysbd)
 
     def resolve_coreference(self):
         """Uses spacy pipleline as a base and extends it
@@ -149,7 +143,7 @@ class Book(BaseModel):
         Saving both resolved text as well as the coreference
         clusters in the chapter.
         """
-        for chapter in tqdm(self.chapters):
+        for chapter in self.chapters:
             if not chapter.clean_text:
                 print(
                     "There is no clean_text for the chapter. \

@@ -145,7 +145,7 @@ class Book(BaseModel):
         """
         for chapter in tqdm(self.chapters):
             if not chapter.space_formatted_text:
-                print(
+                raise ValidationError(
                     "There is no space_formatted_text for the chapter. \
                     Please run book.improve_sentence_boundries or manually add\
                     custom cleaned text by iterating through chapters"

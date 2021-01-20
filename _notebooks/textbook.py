@@ -145,12 +145,11 @@ class Book(BaseModel):
         """
         for chapter in tqdm(self.chapters):
             if not chapter.space_formatted_text:
-                raise ValidationError(
+                raise Exception(
                     "There is no space_formatted_text for the chapter. \
                     Please run book.improve_sentence_boundries or manually add\
                     custom cleaned text by iterating through chapters"
                 )
-                return
             doc = nlp(chapter.space_formatted_text)
             chapter.coref_resolved_text = doc._.coref_resolved
             chapter.coref_clusters = doc._.coref_clusters

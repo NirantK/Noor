@@ -21,7 +21,7 @@ class Chapter(BaseModel):
     number: int
     file_path: Union[Path, str] = ""
     raw_text: str
-    clean_text: Union[None, str]
+    space_formatted_text: Union[None, str]
     coref_resolved_text: Union[None, str]
     coref_clusters: Union[None, list]
 
@@ -37,9 +37,9 @@ class Chapter(BaseModel):
         clean = []
         for text in self.raw_text.split("\n\n"):
             clean.append(text.replace("\n", " "))
-        self.clean_text = "\n".join(clean)
+        self.space_formatted_text = "\n".join(clean)
         if not disable_pysbd:
-            self.clean_text = "\n".join(seg.segment(self.clean_text))
+            self.space_formatted_text = "\n".join(seg.segment(self.space_formatted_text))
 
 
 class Book(BaseModel):
@@ -122,7 +122,7 @@ class Book(BaseModel):
             output_io_wrapper = StringIO()
             plain_text = pdf_to_text(file, output_io_wrapper)
             chp = Chapter(
-                clean_text=None,
+                space_formatted_text=None,
                 raw_text=plain_text,
                 file_path=file,
                 number=int(file.stem[-2:]),
@@ -144,13 +144,13 @@ class Book(BaseModel):
         clusters in the chapter.
         """
         for chapter in tqdm(self.chapters):
-            if not chapter.clean_text:
+            if not chapter.space_formatted_text:
                 print(
-                    "There is no clean_text for the chapter. \
+                    "There is no space_formatted_text for the chapter. \
                     Please run book.improve_sentence_boundries or manually add\
                     custom cleaned text by iterating through chapters"
                 )
                 return
-            doc = nlp(chapter.clean_text)
+            doc = nlp(chapter.space_formatted_text)
             chapter.coref_resolved_text = doc._.coref_resolved
             chapter.coref_clusters = doc._.coref_clusters

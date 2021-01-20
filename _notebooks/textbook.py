@@ -135,30 +135,6 @@ class Book(BaseModel):
         for chapter in self.chapters:
             chapter.better_sentence_boundaries(disable_pysbd=disable_pysbd)
 
-<<<<<<< HEAD
-        Didn't use the spacy-pipe version of this because it
-        is conflicting with the neuralcoref.
-
-        Each paragraph is separated by \n\n so using that
-        to remove separate it in paragraphs and then removing \n
-        within the paragraphs.
-        Also using pySBD to then identify sentences in each
-        paragraph. I don't know if we need this so added a disable
-        option for this. The difference you can see after disabling
-        it is you will be able to see the whole paragraph as one
-        blob.
-        """
-        for chapter in tqdm(self.chapters):
-            clean = []
-            for text in chapter.raw_text.split("\n\n"):
-                clean.append(text.replace("\n", " "))
-            clean_text = "\n".join(clean)
-            if not disable_pysbd:
-                clean_text = "\n".join(seg.segment(clean_text))
-            chapter.clean_text = clean_text
-
-=======
->>>>>>> a6be4fc13eb2069247339f90ae6bfd12824d874f
     def resolve_coreference(self):
         """Uses spacy pipleline as a base and extends it
         using neuralcoreference to process the coreferences
@@ -167,11 +143,7 @@ class Book(BaseModel):
         Saving both resolved text as well as the coreference
         clusters in the chapter.
         """
-<<<<<<< HEAD
         for chapter in tqdm(self.chapters):
-=======
-        for chapter in self.chapters:
->>>>>>> a6be4fc13eb2069247339f90ae6bfd12824d874f
             if not chapter.clean_text:
                 print(
                     "There is no clean_text for the chapter. \

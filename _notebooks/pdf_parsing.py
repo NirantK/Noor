@@ -26,9 +26,7 @@ def pdf_to_text(file: str, output_io_wrapper: object) -> List[str]:
         parser = PDFParser(in_file)
         doc = PDFDocument(parser)
         resource_manager = PDFResourceManager()
-        test_converter = TextConverter(
-            resource_manager, output_io_wrapper, laparams=LAParams(line_margin=0.7)
-        )
+        test_converter = TextConverter(resource_manager, output_io_wrapper, laparams=LAParams(line_margin=0.7))
         interpreter = PDFPageInterpreter(resource_manager, test_converter)
         # Processor for the content of a PDF page
 

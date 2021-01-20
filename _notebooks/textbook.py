@@ -131,7 +131,7 @@ class Book(BaseModel):
             )
             self.chapters.append(chp)
 
-    def clean_raw_text(self, disable_pysbd: Bool = False):
+    def improve_sentence_boundries(self, disable_pysbd: Bool = False):
         for chapter in self.chapters:
             chapter.better_sentence_boundaries(disable_pysbd=disable_pysbd)
 
@@ -147,7 +147,7 @@ class Book(BaseModel):
             if not chapter.clean_text:
                 print(
                     "There is no clean_text for the chapter. \
-                    Please run book.clean_raw_text or manually add\
+                    Please run book.improve_sentence_boundries or manually add\
                     custom cleaned text by iterating through chapters"
                 )
                 return

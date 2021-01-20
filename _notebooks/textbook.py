@@ -1,21 +1,45 @@
 from io import StringIO
 from pathlib import Path
-from typing import List, Union
+from typing import Bool, List, Union
 
-import pysbd
 import requests
-from pdf_parsing import pdf_to_text
+import spacy
 from pydantic import BaseModel
 from tqdm import tqdm
 
+import neuralcoref
+import pysbd  # pySBD (Python Sentence Boundary Disambiguation) is a rule-based sentence boundary detection
+from pdf_parsing import pdf_to_text
+
 seg = pysbd.Segmenter(language="en", clean=True)
+
+nlp = spacy.load("en")
+neuralcoref.add_to_pipe(nlp)
 
 
 class Chapter(BaseModel):
     number: int
     file_path: Union[Path, str] = ""
     raw_text: str
-    clean_text: Union[None, str]
+    space_formatted_text: Union[None, str]
+    coref_resolved_text: Union[None, str]
+    coref_clusters: Union[None, list]
+
+    def better_sentence_boundaries(self, disable_pysbd: Bool = False) -> None:
+        """
+        Each paragraph is separated by \n\n so using that
+        to remove separate it in paragraphs and then removing \n
+        within the paragraphs.
+
+        Also using pySBD to then identify sentences in each
+        paragraph. Disabling it converts the para into one single large blob
+        """
+        clean = []
+        for text in self.raw_text.split("\n\n"):
+            clean.append(text.replace("\n", " "))
+        self.space_formatted_text = "\n".join(clean)
+        if not disable_pysbd:
+            self.space_formatted_text = "\n".join(seg.segment(self.space_formatted_text))
 
 
 class Book(BaseModel):
@@ -88,7 +112,7 @@ class Book(BaseModel):
             return pdf_files
 
         pdf_files = get_chapter_pdf_for_book(self)
-        for file in tqdm(pdf_files):
+        for file in pdf_files:
             """
             output_io_wrapper is StringIO because TextConverter expect
             StringIOWrapper/TextIOWrapper or similar object as an input.
@@ -98,35 +122,32 @@ class Book(BaseModel):
             output_io_wrapper = StringIO()
             plain_text = pdf_to_text(file, output_io_wrapper)
             chp = Chapter(
-                clean_text=None,
+                space_formatted_text=None,
                 raw_text=plain_text,
                 file_path=file,
                 number=int(file.stem[-2:]),
+                coref_resolved_text=None,
+                coref_clusters=None,
             )
             self.chapters.append(chp)
 
-    def clean_raw_text(self, disable_pysbd=False):
-        """pySBD (Python Sentence Boundary Disambiguation)
-        is a rule-based sentence boundary detection that
-        works out-of-the-box.
+    def improve_sentence_boundries(self, disable_pysbd: Bool = False):
+        for chapter in self.chapters:
+            chapter.better_sentence_boundaries(disable_pysbd=disable_pysbd)
 
-        Didn't use the spacy-pipe version of this because it
-        is conflicting with the neuralcoref.
+    def resolve_coreference(self):
+        """Uses spacy pipleline as a base and extends it
+        using neuralcoreference to process the coreferences
+        in the plain text that you get.
 
-        Each paragraph is separated by \n\n so using that
-        to remove separate it in paragraphs and then removing \n
-        within the paragraphs.
-        Also using pySBD to then identify sentences in each
-        paragraph. I don't know if we need this so added a disable
-        option for this. The difference you can see after disabling
-        it is you will be able to see the whole paragraph as one
-        blob.
+        Saving both resolved text as well as the coreference
+        clusters in the chapter.
         """
         for chapter in tqdm(self.chapters):
-            clean = []
-            for text in chapter.raw_text.split("\n\n"):
-                clean.append(text.replace("\n", " "))
-            clean_text = "\n".join(clean)
-            if not disable_pysbd:
-                clean_text = "\n".join(seg.segment(clean_text))
-            chapter.clean_text = clean_text
+            if not chapter.space_formatted_text:
+                raise Exception(
+                    "The recommended approach to restore sentence sentence boundaries before coreference resolution. You may save the  in <var-name> of each book."
+                )
+            doc = nlp(chapter.space_formatted_text)
+            chapter.coref_resolved_text = doc._.coref_resolved
+            chapter.coref_clusters = doc._.coref_clusters

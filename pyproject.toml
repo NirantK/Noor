@@ -1,0 +1,3 @@
+[tool.black]
+ensure_newline_before_comments = true
+line_length = 120

@@ -1,15 +1,14 @@
 from io import StringIO
 from pathlib import Path
-from typing import List, Union
+from typing import Bool, List, Union
 
-import pysbd
 import requests
-from pdf_parsing import pdf_to_text
+import spacy
 from pydantic import BaseModel
 from tqdm import tqdm
 
 import neuralcoref
-import spacy
+import pysbd  # pySBD (Python Sentence Boundary Disambiguation) is a rule-based sentence boundary detection
 from pdf_parsing import pdf_to_text
 
 seg = pysbd.Segmenter(language="en", clean=True)
@@ -25,6 +24,22 @@ class Chapter(BaseModel):
     clean_text: Union[None, str]
     coref_resolved_text: Union[None, str]
     coref_clusters: Union[None, list]
+
+    def better_sentence_boundaries(self, disable_pysbd: Bool = False) -> None:
+        """
+        Each paragraph is separated by \n\n so using that
+        to remove separate it in paragraphs and then removing \n
+        within the paragraphs.
+
+        Also using pySBD to then identify sentences in each
+        paragraph. Disabling it converts the para into one single large blob
+        """
+        clean = []
+        for text in self.raw_text.split("\n\n"):
+            clean.append(text.replace("\n", " "))
+        self.clean_text = "\n".join(clean)
+        if not disable_pysbd:
+            self.clean_text = "\n".join(seg.segment(self.clean_text))
 
 
 class Book(BaseModel):
@@ -97,7 +112,7 @@ class Book(BaseModel):
             return pdf_files
 
         pdf_files = get_chapter_pdf_for_book(self)
-        for file in tqdm(pdf_files):
+        for file in pdf_files:
             """
             output_io_wrapper is StringIO because TextConverter expect
             StringIOWrapper/TextIOWrapper or similar object as an input.
@@ -116,11 +131,11 @@ class Book(BaseModel):
             )
             self.chapters.append(chp)
 
-    def clean_raw_text(self, disable_pysbd=False):
-        """pySBD (Python Sentence Boundary Disambiguation)
-        is a rule-based sentence boundary detection that
-        works out-of-the-box.
+    def clean_raw_text(self, disable_pysbd: Bool = False):
+        for chapter in self.chapters:
+            chapter.better_sentence_boundaries(disable_pysbd=disable_pysbd)
 
+<<<<<<< HEAD
         Didn't use the spacy-pipe version of this because it
         is conflicting with the neuralcoref.
 
@@ -142,6 +157,8 @@ class Book(BaseModel):
                 clean_text = "\n".join(seg.segment(clean_text))
             chapter.clean_text = clean_text
 
+=======
+>>>>>>> a6be4fc13eb2069247339f90ae6bfd12824d874f
     def resolve_coreference(self):
         """Uses spacy pipleline as a base and extends it
         using neuralcoreference to process the coreferences
@@ -150,7 +167,11 @@ class Book(BaseModel):
         Saving both resolved text as well as the coreference
         clusters in the chapter.
         """
+<<<<<<< HEAD
         for chapter in tqdm(self.chapters):
+=======
+        for chapter in self.chapters:
+>>>>>>> a6be4fc13eb2069247339f90ae6bfd12824d874f
             if not chapter.clean_text:
                 print(
                     "There is no clean_text for the chapter. \
